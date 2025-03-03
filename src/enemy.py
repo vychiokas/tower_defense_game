@@ -14,13 +14,15 @@ PURPLE = (160, 32, 240)
 
 
 class Enemy(ABC):
-    def __init__(self, path, speed, health):
+    def __init__(self, path, speed, health, size, color):
         self.path = path
         self.path_index = 0
         self.pos = list(self.path[self.path_index])
         self.speed = speed
         self.health = health
         self.max_health = health
+        self.size = size
+        self.color = color
 
     def move(self):
         if self.path_index < len(self.path) - 1:
@@ -53,34 +55,44 @@ class Enemy(ABC):
         pygame.draw.rect(screen, (0, 255, 0), (bar_x, bar_y, filled_width, bar_height))
 
     def draw(self, screen):
-        pygame.draw.circle(screen, RED, (int(self.pos[0]), int(self.pos[1])), 10)
+        pygame.draw.circle(screen, self.color, (int(self.pos[0]), int(self.pos[1])), self.size)
         self.draw_health_bar(screen)
 
 
 class LightSlowEnemy(Enemy):
     def __init__(self, path):
-        super().__init__(path, 1, 40)
+        super().__init__(path, 1, 40, 10, BLUE)
 
 
 class LightFastEnemy(Enemy):
     def __init__(self, path):
-        super().__init__(path, 5, 40)
+        super().__init__(path, 5, 70, 10, BLUE)
 
 
 class MediumSlowEnemy(Enemy):
     def __init__(self, path):
-        super().__init__(path, 1, 40)
+        super().__init__(path, 1, 80, 15, YELLOW)
 
 
 class MediumFastEnemy(Enemy):
     def __init__(self, path):
-        super().__init__(path, 1, 40)
+        super().__init__(path, 5, 120, 15, YELLOW)
+
+
+class HeavySlowEnemy(Enemy):
+    def __init__(self, path):
+        super().__init__(path, 1, 150, 18, BROWN)
+
+
+class HeavyFastEnemy(Enemy):
+    def __init__(self, path):
+        super().__init__(path, 3, 200, 18, BROWN)
 
 
 class Boss(Enemy):
     def __init__(self, path):
-        super().__init__(path, 1, 10000)
+        super().__init__(path, 1, 10000, 20, PURPLE)
 
     def draw(self, screen):
-        pygame.draw.circle(screen, PURPLE, (int(self.pos[0]), int(self.pos[1])), 20)
+        pygame.draw.circle(screen, self.color, (int(self.pos[0]), int(self.pos[1])), 20)
         self.draw_health_bar(screen)

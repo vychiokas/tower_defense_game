@@ -3,7 +3,15 @@ import sys
 import time
 import math
 
-from enemy import Boss, LightFastEnemy, LightSlowEnemy, MediumFastEnemy, MediumSlowEnemy
+from enemy import (
+    Boss,
+    LightFastEnemy,
+    LightSlowEnemy,
+    MediumFastEnemy,
+    MediumSlowEnemy,
+    HeavyFastEnemy,
+    HeavySlowEnemy,
+)
 from turret import Turret
 from wave import Wave
 
@@ -88,8 +96,10 @@ game_map = GameMap()
 menu = Menu()
 turrets: list[Turret] = []
 waves = [
-    Wave(game_map.path, 50, 0.5, LightFastEnemy),
-    Wave(game_map.path, 100, 0.1, MediumFastEnemy),
+    Wave(game_map.path, 5, 0.5, LightFastEnemy),
+    Wave(game_map.path, 4, 0.5, MediumFastEnemy),
+    Wave(game_map.path, 3, 0.8, HeavySlowEnemy),
+    Wave(game_map.path, 1, 0.8, Boss),
 ]
 
 wave_index = 0

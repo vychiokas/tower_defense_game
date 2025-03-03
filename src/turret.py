@@ -11,7 +11,7 @@ class Projectile:
     def __init__(self, x, y, target, damage):
         self.pos = [x, y]
         self.target = target
-        self.speed = 5
+        self.speed = 10
         self.damage = damage
         self.active = True
 
@@ -38,7 +38,7 @@ class Turret:
         self.pos = (x, y)
         self.color = BLACK
         self.radius = 15
-        self.range = 500
+        self.range = 100
         self.fire_rate = 0.1
         self.damage = 20
         self.last_shot = time.time()

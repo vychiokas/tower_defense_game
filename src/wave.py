@@ -6,7 +6,13 @@ from enemy import Enemy
 
 
 class Wave:
-    def __init__(self, path: list[tuple[int, int]], num_enemies: int, spawn_delay: int, enemy_type: Enemy):
+    def __init__(
+        self,
+        path: list[tuple[int, int]],
+        num_enemies: int,
+        spawn_delay: int,
+        enemy_type: Enemy,
+    ):
         self.enemies = []
         self.spawn_time = time.time()
         self.spawn_delay = spawn_delay

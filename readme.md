@@ -13,6 +13,7 @@ Game wise:
 5. Calculate scores
 6. fix shooting stuff
 7. ability to add more maps (or generate maps + waves)
+8. add you own hp if the enemy makes till the end -1
 
 Code wise:
 
