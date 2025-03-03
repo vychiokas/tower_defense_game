@@ -11,7 +11,8 @@ Game wise:
 3. add different turret types
 4. add Menu
 5. Calculate scores
-
+6. fix shooting stuff
+7. ability to add more maps (or generate maps + waves)
 
 Code wise:
 
