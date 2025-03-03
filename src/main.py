@@ -5,6 +5,8 @@ import math
 
 from enemy import Boss, LightFastEnemy, LightSlowEnemy, MediumFastEnemy, MediumSlowEnemy
 from turret import Turret
+from wave import Wave
+
 
 pygame.init()
 
@@ -57,41 +59,6 @@ class GameMap:
             pygame.draw.circle(screen, self.path_color, point, 5)
 
 
-# Wave class
-class Wave:
-    def __init__(self, path, num_enemies, spawn_delay, enemy_type):
-        self.enemies = []
-        self.spawn_time = time.time()
-        self.spawn_delay = spawn_delay
-        self.num_enemies = num_enemies
-        self.spawned = 0
-        self.path = path
-        self.enemy_type = enemy_type
-
-    def update(self):
-        current_time = time.time()
-        if (
-            self.spawned < self.num_enemies
-            and current_time - self.spawn_time > self.spawn_delay
-        ):
-            self.enemies.append(self.enemy_type(self.path))
-            self.spawned += 1
-            self.spawn_time = current_time
-
-        for enemy in self.enemies:
-            enemy.move()
-
-        self.enemies = [enemy for enemy in self.enemies if enemy.health > 0]
-
-    def draw(self, screen):
-        for enemy in self.enemies:
-            enemy.draw(screen)
-
-    def is_finished(self):
-        return (self.spawned == self.num_enemies) and (len(self.enemies) == 0)
-
-
-# Menu class
 class Menu:
     def __init__(self):
         self.bg_color = GRAY
