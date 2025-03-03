@@ -34,7 +34,7 @@ BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 
 # Setup
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen: pygame.Surface = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Tower Defense Game")
 clock = pygame.time.Clock()
 
@@ -57,7 +57,7 @@ class GameMap:
         self.path_color = BLUE
         self.road_color = BROWN
 
-    def draw(self, screen):
+    def draw(self, screen: pygame.Surface):
         screen.fill(self.bg_color)
         for i in range(len(self.path) - 1):
             pygame.draw.line(
@@ -95,7 +95,7 @@ class Menu:
 game_map = GameMap()
 menu = Menu()
 turrets: list[Turret] = []
-waves = [
+waves: list[Wave] = [
     Wave(game_map.path, 5, 0.5, LightFastEnemy),
     Wave(game_map.path, 4, 0.5, MediumFastEnemy),
     Wave(game_map.path, 3, 0.8, HeavySlowEnemy),

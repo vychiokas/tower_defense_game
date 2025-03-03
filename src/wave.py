@@ -1,4 +1,5 @@
 import time
+from typing import Type
 
 import pygame
 
@@ -10,10 +11,10 @@ class Wave:
         self,
         path: list[tuple[int, int]],
         num_enemies: int,
-        spawn_delay: int,
-        enemy_type: Enemy,
+        spawn_delay: int | float,
+        enemy_type: Type[Enemy],
     ):
-        self.enemies = []
+        self.enemies: list[Enemy] = []
         self.spawn_time = time.time()
         self.spawn_delay = spawn_delay
         self.num_enemies = num_enemies
@@ -36,7 +37,7 @@ class Wave:
 
         self.enemies = [enemy for enemy in self.enemies if enemy.health > 0]
 
-    def draw(self, screen):
+    def draw(self, screen: pygame.Surface):
         for enemy in self.enemies:
             enemy.draw(screen)
 
