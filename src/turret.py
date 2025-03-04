@@ -38,14 +38,26 @@ class Projectile:
 # Turret class
 class Turret:
     def __init__(self, x: int, y: int):
-        self.pos = (x, y)
+        self.pos = [x, y]
+        self.base_radius = 15
+        self.base_range = 100
+        self.update_dimensions()
         self.color = BLACK
-        self.radius = 15
-        self.range = 100
         self.fire_rate = 0.1
         self.damage = 20
         self.last_shot = time.time()
         self.projectiles: list[Projectile] = []
+        self.cost = 50  # Add cost as a turret attribute
+
+    def update_dimensions(self):
+        width, height = pygame.display.get_surface().get_size()
+        scale = width / 800
+        self.radius = int(self.base_radius * scale)
+        self.range = int(self.base_range * scale)
+
+    def scale_position(self, width_ratio: float, height_ratio: float):
+        self.pos[0] = int(self.pos[0] * width_ratio)
+        self.pos[1] = int(self.pos[1] * height_ratio)
 
     def shoot(self, enemies: list[Enemy]):
         current_time = time.time()

@@ -13,7 +13,7 @@ class Wave:
         num_enemies: int,
         spawn_delay: int | float,
         enemy_type: Type[Enemy],
-        game_stats: "GameStats",
+        game_stats: 'GameStats',
     ):
         self.enemies: list[Enemy] = []
         self.spawn_time = time.time()
@@ -41,7 +41,7 @@ class Wave:
         for enemy in self.enemies:
             if enemy.health <= 0:
                 self.game_stats.add_gold(enemy.gold_value)
-
+        
         # Filter out dead enemies
         self.enemies = [enemy for enemy in self.enemies if enemy.health > 0]
 
@@ -51,3 +51,9 @@ class Wave:
 
     def is_finished(self):
         return (self.spawned == self.num_enemies) and (len(self.enemies) == 0)
+
+    def update_path(self, new_path: list[tuple[int, int]]):
+        self.path = new_path
+        # Update all existing enemies with new path
+        for enemy in self.enemies:
+            enemy.path = new_path

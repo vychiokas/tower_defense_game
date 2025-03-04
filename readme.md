@@ -6,8 +6,8 @@
 
 Game wise:
 
-1. add money into the game
-2. make it so you cannot stack tower on top or super close
+1. ~~ add money into the game ~~
+2. ~~ make it so you cannot stack tower on top or super close ~~
 3. add different turret types
 4. add Menu
 5. Calculate scores
