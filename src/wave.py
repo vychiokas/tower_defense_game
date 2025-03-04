@@ -13,6 +13,7 @@ class Wave:
         num_enemies: int,
         spawn_delay: int | float,
         enemy_type: Type[Enemy],
+        game_stats: "GameStats",
     ):
         self.enemies: list[Enemy] = []
         self.spawn_time = time.time()
@@ -21,6 +22,7 @@ class Wave:
         self.spawned = 0
         self.path = path
         self.enemy_type = enemy_type
+        self.game_stats = game_stats
 
     def update(self):
         current_time = time.time()
@@ -35,6 +37,12 @@ class Wave:
         for enemy in self.enemies:
             enemy.move()
 
+        # Check for dead enemies and award gold
+        for enemy in self.enemies:
+            if enemy.health <= 0:
+                self.game_stats.add_gold(enemy.gold_value)
+
+        # Filter out dead enemies
         self.enemies = [enemy for enemy in self.enemies if enemy.health > 0]
 
     def draw(self, screen: pygame.Surface):

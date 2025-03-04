@@ -39,6 +39,20 @@ pygame.display.set_caption("Tower Defense Game")
 clock = pygame.time.Clock()
 
 
+class GameStats:
+    def __init__(self):
+        self.gold = 0  # Initialize player's gold
+        self.font = pygame.font.Font(None, 36)  # Font for displaying gold
+
+    def draw(self, screen: pygame.Surface):
+        # Draw gold counter in top left corner
+        gold_text = self.font.render(f"Gold: {self.gold}", True, (255, 215, 0))
+        screen.blit(gold_text, (10, 10))
+
+    def add_gold(self, amount: int):
+        self.gold += amount
+
+
 # Map class
 class GameMap:
     def __init__(self):
@@ -71,7 +85,7 @@ class Menu:
     def __init__(self):
         self.bg_color = GRAY
         self.rect = pygame.Rect(0, HEIGHT - MENU_HEIGHT, WIDTH, MENU_HEIGHT)
-        # Example “buildings” in the menu
+        # Example "buildings" in the menu
         self.buildings = [
             pygame.Rect(50, HEIGHT - 60, 40, 40),  # Some building 0
             pygame.Rect(120, HEIGHT - 60, 40, 40),  # Some building 1
@@ -94,12 +108,13 @@ class Menu:
 # Init the game objects
 game_map = GameMap()
 menu = Menu()
+stats = GameStats()
 turrets: list[Turret] = []
 waves: list[Wave] = [
-    Wave(game_map.path, 5, 0.5, LightFastEnemy),
-    Wave(game_map.path, 4, 0.5, MediumFastEnemy),
-    Wave(game_map.path, 3, 0.8, HeavySlowEnemy),
-    Wave(game_map.path, 1, 0.8, Boss),
+    Wave(game_map.path, 5, 0.5, LightFastEnemy, stats),
+    Wave(game_map.path, 4, 0.5, MediumFastEnemy, stats),
+    Wave(game_map.path, 3, 0.8, HeavySlowEnemy, stats),
+    Wave(game_map.path, 1, 0.8, Boss, stats),
 ]
 
 wave_index = 0
@@ -107,7 +122,7 @@ running = True
 while running:
     game_map.draw(screen)
     menu.draw(screen)
-
+    stats.draw(screen)
     # Update/draw turrets
     if wave_index < len(waves):
         current_wave = waves[wave_index]

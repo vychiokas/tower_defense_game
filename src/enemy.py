@@ -14,7 +14,15 @@ PURPLE = (160, 32, 240)
 
 
 class Enemy(ABC):
-    def __init__(self, path: list[tuple[int, int]], speed: int | float, health: int, size: int, color: tuple[int, int, int]):
+    def __init__(
+        self,
+        path: list[tuple[int, int]],
+        speed: int | float,
+        health: int,
+        size: int,
+        color: tuple[int, int, int],
+        gold_value: int,
+    ):
         self.path = path
         self.path_index = 0
         self.pos = list(self.path[self.path_index])
@@ -23,6 +31,8 @@ class Enemy(ABC):
         self.max_health = health
         self.size = size
         self.color = color
+        # Add gold value for each enemy
+        self.gold_value = gold_value  # Basic enemies give 10 gold
 
     def move(self):
         if self.path_index < len(self.path) - 1:
@@ -55,43 +65,45 @@ class Enemy(ABC):
         pygame.draw.rect(screen, (0, 255, 0), (bar_x, bar_y, filled_width, bar_height))
 
     def draw(self, screen):
-        pygame.draw.circle(screen, self.color, (int(self.pos[0]), int(self.pos[1])), self.size)
+        pygame.draw.circle(
+            screen, self.color, (int(self.pos[0]), int(self.pos[1])), self.size
+        )
         self.draw_health_bar(screen)
 
 
 class LightSlowEnemy(Enemy):
-    def __init__(self, path:list[tuple[int, int]]):
-        super().__init__(path, 1, 40, 10, BLUE)
+    def __init__(self, path: list[tuple[int, int]]):
+        super().__init__(path, 1, 40, 10, BLUE, 10)
 
 
 class LightFastEnemy(Enemy):
-    def __init__(self, path:list[tuple[int, int]]):
-        super().__init__(path, 5, 70, 10, BLUE)
+    def __init__(self, path: list[tuple[int, int]]):
+        super().__init__(path, 5, 70, 10, BLUE, 15)
 
 
 class MediumSlowEnemy(Enemy):
-    def __init__(self, path:list[tuple[int, int]]):
-        super().__init__(path, 1, 80, 15, YELLOW)
+    def __init__(self, path: list[tuple[int, int]]):
+        super().__init__(path, 1, 80, 15, YELLOW, 20)
 
 
 class MediumFastEnemy(Enemy):
-    def __init__(self, path:list[tuple[int, int]]):
-        super().__init__(path, 5, 120, 15, YELLOW)
+    def __init__(self, path: list[tuple[int, int]]):
+        super().__init__(path, 5, 120, 15, YELLOW, 25)
 
 
 class HeavySlowEnemy(Enemy):
-    def __init__(self, path:list[tuple[int, int]]):
-        super().__init__(path, 1, 150, 18, BROWN)
+    def __init__(self, path: list[tuple[int, int]]):
+        super().__init__(path, 1, 150, 18, BROWN, 30)
 
 
 class HeavyFastEnemy(Enemy):
-    def __init__(self, path:list[tuple[int, int]]):
-        super().__init__(path, 3, 200, 18, BROWN)
+    def __init__(self, path: list[tuple[int, int]]):
+        super().__init__(path, 3, 200, 18, BROWN, 35)
 
 
 class Boss(Enemy):
-    def __init__(self, path:list[tuple[int, int]]):
-        super().__init__(path, 1, 10000, 20, PURPLE)
+    def __init__(self, path: list[tuple[int, int]]):
+        super().__init__(path, 1, 10000, 20, PURPLE, 100)
 
     def draw(self, screen: pygame.Surface):
         pygame.draw.circle(screen, self.color, (int(self.pos[0]), int(self.pos[1])), 20)
