@@ -135,17 +135,18 @@ class GameMap:
         # Clear the grid surface
         self.grid_surface.fill((0, 0, 0, 0))  # Transparent fill
         
-        # Draw the semi-transparent grid
+        # Draw the semi-transparent grid only for valid placement cells
         for y in range(len(self.grid)):
             for x in range(len(self.grid[0])):
-                rect = pygame.Rect(
-                    x * self.grid_size, 
-                    y * self.grid_size, 
-                    self.grid_size, 
-                    self.grid_size
-                )
-                # Draw grid lines with alpha transparency (fourth value is alpha, 0-255)
-                pygame.draw.rect(self.grid_surface, (*LIGHT_GRAY, 128), rect, 1)
+                # Only draw grid for valid placement cells
+                if self.grid[y][x]:  # If cell is available for placement
+                    rect = pygame.Rect(
+                        x * self.grid_size, 
+                        y * self.grid_size, 
+                        self.grid_size, 
+                        self.grid_size
+                    )
+                    pygame.draw.rect(self.grid_surface, (*LIGHT_GRAY, 128), rect, 1)
         
         # Blit the grid surface onto the main screen
         screen.blit(self.grid_surface, (0, 0))
