@@ -33,6 +33,8 @@ class Enemy(ABC):
         self.color = color
         # Add gold value for each enemy
         self.gold_value = gold_value  # Basic enemies give 10 gold
+        self.reached_end = False
+        self.damage = 10  # Damage dealt to player when reaching the end
 
     def move(self):
         if self.path_index < len(self.path) - 1:
@@ -44,6 +46,8 @@ class Enemy(ABC):
             else:
                 self.pos[0] += self.speed * dx / dist
                 self.pos[1] += self.speed * dy / dist
+        elif not self.reached_end:  # Only set once when reaching the end
+            self.reached_end = True
 
     def draw_health_bar(self, screen: pygame.Surface):
         """Draw a simple health bar above the boss."""

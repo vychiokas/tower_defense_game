@@ -36,10 +36,14 @@ class Wave:
 
         for enemy in self.enemies:
             enemy.move()
+            # Check if enemy reached the end
+            if enemy.reached_end:
+                self.game_stats.take_damage(enemy.damage)
+                enemy.health = 0  # Remove the enemy
 
         # Check for dead enemies and award gold
         for enemy in self.enemies:
-            if enemy.health <= 0:
+            if enemy.health <= 0 and not enemy.reached_end:
                 self.game_stats.add_gold(enemy.gold_value)
         
         # Filter out dead enemies

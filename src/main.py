@@ -38,11 +38,35 @@ STARTING_GOLD = 100
 class GameStats:
     def __init__(self):
         self.gold = STARTING_GOLD
-        self.font = pygame.font.Font(None, 36)
+        self.max_health = 100
+        self.health = self.max_health
+        self.font = pygame.font.Font(None, 24)
 
     def draw(self, screen: pygame.Surface):
+        # Draw gold
         gold_text = self.font.render(f"Gold: {self.gold}", True, (255, 215, 0))
         screen.blit(gold_text, (10, 10))
+
+        # Draw health bar
+        bar_width = 200
+        bar_height = 20
+        bar_position = (WIDTH - bar_width - 10, 10)  # Top right corner
+        
+        # Draw black background first
+        pygame.draw.rect(screen, BLACK, (bar_position[0], bar_position[1], bar_width, bar_height))
+
+        # Draw red health bar (only for remaining health)
+        health_width = int(bar_width * (self.health / self.max_health))
+        pygame.draw.rect(screen, RED, (bar_position[0], bar_position[1], health_width, bar_height))
+
+        # Draw black outline
+        pygame.draw.rect(screen, BLACK, (bar_position[0], bar_position[1], bar_width, bar_height), 2)
+
+        # Draw health text
+        health_text = self.font.render(f"{self.health}/{self.max_health}", True, WHITE)
+        text_pos = (bar_position[0] + bar_width//2 - health_text.get_width()//2, 
+                   bar_position[1] + bar_height//2 - health_text.get_height()//2)
+        screen.blit(health_text, text_pos)
 
     def add_gold(self, amount: int):
         self.gold += amount
@@ -52,6 +76,12 @@ class GameStats:
 
     def spend_gold(self, cost: int):
         self.gold -= cost
+
+    def take_damage(self, amount: int):
+        self.health = max(0, self.health - amount)
+
+    def is_game_over(self) -> bool:
+        return self.health <= 0
 
 class GameMap:
     def __init__(self):
@@ -222,6 +252,11 @@ while running:
         current_wave.draw(screen)
         if current_wave.is_finished():
             wave_index += 1
+
+    # Check for game over
+    if stats.is_game_over():
+        # You could add game over screen here
+        running = False
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
