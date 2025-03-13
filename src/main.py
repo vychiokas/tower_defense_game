@@ -12,7 +12,7 @@ from enemy import (
     HeavyFastEnemy,
     HeavySlowEnemy,
 )
-from turret import Turret
+from turret import BulletTurret, TeslaTurret, IceTurret
 from wave import Wave
 
 pygame.init()
@@ -33,7 +33,7 @@ LIGHT_GRAY = (211, 211, 211)
 BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 
-STARTING_GOLD = 100
+STARTING_GOLD = 1000
 
 class GameStats:
     def __init__(self):
@@ -190,19 +190,43 @@ class Menu:
         self.buildings = [
             pygame.Rect(50, HEIGHT - MENU_HEIGHT + 20, button_size, button_size),
             pygame.Rect(120, HEIGHT - MENU_HEIGHT + 20, button_size, button_size),
+            pygame.Rect(190, HEIGHT - MENU_HEIGHT + 20, button_size, button_size),
         ]
 
     def draw(self, screen: pygame.Surface):
         # Draw menu background
         pygame.draw.rect(screen, self.bg_color, self.rect)
         
-        # Draw building buttons
-        for i, button in enumerate(self.buildings):
-            color = RED if self.selected_building == i else BLACK
-            pygame.draw.rect(screen, color, button)
+        # Draw bullet turret button (circle)
+        button = self.buildings[0]
+        color = RED if self.selected_building == 0 else BLACK
+        pygame.draw.circle(screen, color, button.center, button.width // 2)
+
+        # Draw tesla turret button (triangle)
+        button = self.buildings[1]
+        color = YELLOW if self.selected_building == 1 else BLACK
+        points = [
+            (button.centerx, button.top),
+            (button.left, button.bottom),
+            (button.right, button.bottom),
+        ]
+        pygame.draw.polygon(screen, color, points)
+
+        # Draw ice turret button (hexagon)
+        button = self.buildings[2]
+        color = BLUE if self.selected_building == 2 else BLACK
+        points = []
+        for i in range(6):
+            angle = math.pi / 3 * i
+            radius = button.width // 2
+            points.append((
+                button.centerx + radius * math.cos(angle),
+                button.centery + radius * math.sin(angle)
+            ))
+        pygame.draw.polygon(screen, color, points)
 
     def handle_click(self, pos):
-        # Check if any building button was clicked
+        # Check if turret button was clicked
         for i, button in enumerate(self.buildings):
             if button.collidepoint(pos):
                 self.selected_building = i
@@ -217,9 +241,9 @@ clock = pygame.time.Clock()
 game_map = GameMap()
 menu = Menu()
 stats = GameStats()
-turrets: list[Turret] = []
+turrets: list[BulletTurret] = []
 waves: list[Wave] = [
-    Wave(game_map.path, 5, 0.5, LightFastEnemy, stats),
+    Wave(game_map.path, 5, 0.5, LightSlowEnemy, stats),
     Wave(game_map.path, 4, 0.5, MediumFastEnemy, stats),
     Wave(game_map.path, 3, 0.8, HeavySlowEnemy, stats),
     Wave(game_map.path, 1, 0.8, Boss, stats),
@@ -239,6 +263,14 @@ while running:
         for turret in turrets:
             turret.update(current_wave.enemies)
             turret.draw(screen)
+        
+        # Draw current wave
+        current_wave.draw(screen)
+        
+        # Draw effects on top of everything
+        for turret in turrets:
+            if isinstance(turret, TeslaTurret):
+                turret.draw_effects(screen)
     else:
         # No more waves
         for turret in turrets:
@@ -276,8 +308,13 @@ while running:
                         # Calculate grid position first
                         grid_x = (x // game_map.grid_size) * game_map.grid_size + game_map.grid_size // 2
                         grid_y = (y // game_map.grid_size) * game_map.grid_size + game_map.grid_size // 2
-                        # Create turret instance to check cost
-                        new_turret = Turret(grid_x, grid_y)
+                        # Create appropriate turret type
+                        if menu.selected_building == 0:
+                            new_turret = BulletTurret(grid_x, grid_y)
+                        elif menu.selected_building == 1:
+                            new_turret = TeslaTurret(grid_x, grid_y)
+                        else:
+                            new_turret = IceTurret(grid_x, grid_y)
                         # Check if player can afford the turret
                         if stats.can_afford(new_turret.cost):
                             turrets.append(new_turret)

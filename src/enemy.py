@@ -26,7 +26,8 @@ class Enemy(ABC):
         self.path = path
         self.path_index = 0
         self.pos = list(self.path[self.path_index])
-        self.speed = speed
+        self.base_speed = speed  # Store base speed
+        self.speed = speed      # Current speed that can be modified
         self.health = health
         self.max_health = health
         self.size = size
