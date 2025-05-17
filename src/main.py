@@ -4,6 +4,7 @@ import time
 import math
 import sqlite3
 import random
+import threading
 
 from enemy import (
     Boss,
@@ -13,6 +14,7 @@ from enemy import (
     MediumSlowEnemy,
     HeavyFastEnemy,
     HeavySlowEnemy,
+    DynamicEnemy,
 )
 from turret import BulletTurret, TeslaTurret, IceTurret
 from wave import Wave
@@ -45,6 +47,10 @@ def save_score_to_db(score):
     c.execute('INSERT INTO scores (score) VALUES (?)', (score,))
     conn.commit()
     conn.close()
+
+
+def save_score_async(score):
+    threading.Thread(target=save_score_to_db, args=(score,), daemon=True).start()
 
 
 class GameStats:
@@ -352,19 +358,35 @@ def draw_high_scores(screen):
     pygame.display.flip()
 
 
+def generate_wave(wave_number, game_map, stats):
+    path = game_map.path
+    if wave_number % 5 == 4:  # Every 5th wave (0-based)
+        # Boss wave
+        num_enemies = 1
+        health = 3000 + wave_number * 500
+        speed = 0.7 + wave_number * 0.03
+        size = 28
+        color = (160, 32, 240)  # Purple
+        gold = 100 + wave_number * 10
+        return Wave(path, num_enemies, 0.8, lambda p: DynamicEnemy(p, speed, health, size, color, gold, gold), stats)
+    else:
+        num_enemies = 10 + wave_number * 4
+        health = 50 + wave_number * 15
+        speed = 1.0 + wave_number * 0.07
+        size = 14 + min(wave_number, 10)  # Slightly bigger over time
+        color = (0, 0, 255) if wave_number < 7 else (255, 165, 0) if wave_number < 14 else (255, 0, 0)
+        gold = 10 + wave_number * 2
+        return Wave(path, num_enemies, max(0.5 - wave_number * 0.02, 0.08), lambda p: DynamicEnemy(p, speed, health, size, color, gold, gold), stats)
+
+
 def reset_game():
-    global game_map, menu, stats, turrets, waves, wave_index
+    global game_map, menu, stats, turrets, wave_index, current_wave
     game_map = GameMap()
     menu = Menu()
     stats = GameStats()
     turrets = []
-    waves = [
-        Wave(game_map.path, 20, 0.5, LightSlowEnemy, stats),
-        Wave(game_map.path, 40, 0.5, MediumFastEnemy, stats),
-        Wave(game_map.path, 30, 0.8, HeavySlowEnemy, stats),
-        Wave(game_map.path, 1, 0.8, Boss, stats),
-    ]
     wave_index = 0
+    current_wave = generate_wave(wave_index, game_map, stats)
 
 # Setup
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -380,14 +402,8 @@ game_map = GameMap()
 menu = Menu()
 stats = GameStats()
 turrets: list[BulletTurret] = []
-waves: list[Wave] = [
-    Wave(game_map.path, 20, 0.5, LightSlowEnemy, stats),
-    Wave(game_map.path, 40, 0.5, MediumFastEnemy, stats),
-    Wave(game_map.path, 30, 0.8, HeavySlowEnemy, stats),
-    Wave(game_map.path, 1, 0.8, Boss, stats),
-]
-
 wave_index = 0
+current_wave = generate_wave(wave_index, game_map, stats)
 running = True
 while running:
     if game_state == 'menu':
@@ -422,41 +438,33 @@ while running:
         menu.draw(screen)
         stats.draw(screen)
         
+        # Draw current wave number at the top center
+        wave_font = pygame.font.Font(None, 48)
+        wave_text = wave_font.render(f"Wave: {wave_index+1}", True, BLACK)
+        screen.blit(wave_text, (WIDTH // 2 - wave_text.get_width() // 2, 10))
+        
         # Update/draw turrets
-        if wave_index < len(waves):
-            current_wave = waves[wave_index]
-            for turret in turrets:
-                turret.update(current_wave.enemies)
-                turret.draw(screen)
-            
-            # Draw current wave
-            current_wave.draw(screen)
-            
-            # Draw effects on top of everything
-            for turret in turrets:
-                if isinstance(turret, TeslaTurret):
-                    turret.draw_effects(screen)
-        else:
-            # No more waves
-            for turret in turrets:
-                turret.update([])
-                turret.draw(screen)
-
+        for turret in turrets:
+            turret.update(current_wave.enemies)
+            turret.draw(screen)
+        # Draw current wave
+        current_wave.draw(screen)
+        # Draw effects on top of everything
+        for turret in turrets:
+            if isinstance(turret, TeslaTurret):
+                turret.draw_effects(screen)
         # Update/draw current wave
-        if wave_index < len(waves):
-            current_wave = waves[wave_index]
-            current_wave.update()
-            current_wave.draw(screen)
-            if current_wave.is_finished():
-                wave_index += 1
-
+        current_wave.update()
+        current_wave.draw(screen)
+        if current_wave.is_finished():
+            wave_index += 1
+            current_wave = generate_wave(wave_index, game_map, stats)
         # Check for game over
-        if stats.is_game_over() or wave_index >= len(waves):
+        if stats.is_game_over():
             # Return to menu after short pause
             pygame.display.flip()
-            pygame.time.wait(1500)
             game_state = 'menu'
-            save_score_to_db(stats.score)
+            save_score_async(stats.score)
             continue
 
         for event in pygame.event.get():

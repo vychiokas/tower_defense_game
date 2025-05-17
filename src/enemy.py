@@ -115,3 +115,8 @@ class Boss(Enemy):
     def draw(self, screen: pygame.Surface):
         pygame.draw.circle(screen, self.color, (int(self.pos[0]), int(self.pos[1])), 20)
         self.draw_health_bar(screen)
+
+
+class DynamicEnemy(Enemy):
+    def __init__(self, path, speed, health, size, color, gold_value, score_value=None):
+        super().__init__(path, speed, health, size, color, gold_value, score_value)
