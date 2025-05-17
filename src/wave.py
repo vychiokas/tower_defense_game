@@ -45,6 +45,7 @@ class Wave:
         for enemy in self.enemies:
             if enemy.health <= 0 and not enemy.reached_end:
                 self.game_stats.add_gold(enemy.gold_value)
+                self.game_stats.add_score(enemy.score_value)
         
         # Filter out dead enemies
         self.enemies = [enemy for enemy in self.enemies if enemy.health > 0]

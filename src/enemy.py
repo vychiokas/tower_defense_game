@@ -22,6 +22,7 @@ class Enemy(ABC):
         size: int,
         color: tuple[int, int, int],
         gold_value: int,
+        score_value: int = None,
     ):
         self.path = path
         self.path_index = 0
@@ -34,6 +35,7 @@ class Enemy(ABC):
         self.color = color
         # Add gold value for each enemy
         self.gold_value = gold_value  # Basic enemies give 10 gold
+        self.score_value = score_value if score_value is not None else gold_value
         self.reached_end = False
         self.damage = 10  # Damage dealt to player when reaching the end
 
@@ -78,37 +80,37 @@ class Enemy(ABC):
 
 class LightSlowEnemy(Enemy):
     def __init__(self, path: list[tuple[int, int]]):
-        super().__init__(path, 1, 40, 10, BLUE, 10)
+        super().__init__(path, 1, 40, 10, BLUE, 10, 10)
 
 
 class LightFastEnemy(Enemy):
     def __init__(self, path: list[tuple[int, int]]):
-        super().__init__(path, 5, 70, 10, BLUE, 15)
+        super().__init__(path, 5, 70, 10, BLUE, 15, 15)
 
 
 class MediumSlowEnemy(Enemy):
     def __init__(self, path: list[tuple[int, int]]):
-        super().__init__(path, 1, 80, 15, YELLOW, 20)
+        super().__init__(path, 1, 80, 15, YELLOW, 20, 20)
 
 
 class MediumFastEnemy(Enemy):
     def __init__(self, path: list[tuple[int, int]]):
-        super().__init__(path, 5, 120, 15, YELLOW, 25)
+        super().__init__(path, 5, 120, 15, YELLOW, 25, 25)
 
 
 class HeavySlowEnemy(Enemy):
     def __init__(self, path: list[tuple[int, int]]):
-        super().__init__(path, 1, 150, 18, BROWN, 30)
+        super().__init__(path, 1, 150, 18, BROWN, 30, 30)
 
 
 class HeavyFastEnemy(Enemy):
     def __init__(self, path: list[tuple[int, int]]):
-        super().__init__(path, 3, 200, 18, BROWN, 35)
+        super().__init__(path, 3, 200, 18, BROWN, 35, 35)
 
 
 class Boss(Enemy):
     def __init__(self, path: list[tuple[int, int]]):
-        super().__init__(path, 1, 10000, 20, PURPLE, 100)
+        super().__init__(path, 1, 10000, 20, PURPLE, 100, 100)
 
     def draw(self, screen: pygame.Surface):
         pygame.draw.circle(screen, self.color, (int(self.pos[0]), int(self.pos[1])), 20)
