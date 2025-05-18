@@ -10,6 +10,13 @@ class BulletTurret(Turret):
         self.last_shot = time.time()
         self.projectiles: list[Projectile] = []
         self.cost = 50  # Specific cost for BulletTurret
+        self.upgrade_level = 0
+        self.set_color()
+
+    def set_color(self):
+        # Level 1: Gray, Level 2: Red, Level 3: Dark Red
+        colors = [(120,120,120), (220,40,40), (120,0,0)]
+        self.color = colors[min(self.upgrade_level, 2)]
 
     def shoot(self, enemies: list):
         current_time = time.time()
@@ -36,4 +43,13 @@ class BulletTurret(Turret):
         super().draw(screen)  # Draw the base turret
         # Draw projectiles
         for projectile in self.projectiles:
-            projectile.draw(screen) 
+            projectile.draw(screen)
+
+    def upgrade(self):
+        self.damage *= 2
+        if self.upgrade_level < 2:
+            self.upgrade_level += 1
+        self.set_color()
+
+    def get_upgrade_cost(self):
+        return 3 * self.cost * (self.upgrade_level + 1) 

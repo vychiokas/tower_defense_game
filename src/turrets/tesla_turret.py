@@ -12,13 +12,19 @@ class TeslaTurret(Turret):
         self.damage = 10
         self.range = 120
         self.cost = 75
-        self.color = YELLOW
         self.max_targets = 5
         self.targets = []
         self.lightning_color = (255, 255, 100)
         self.lightning_width = 4
         self.spark_size = 4
         self.spark_spread = 20
+        self.upgrade_level = 0
+        self.set_color()
+
+    def set_color(self):
+        # Level 1: Yellow, Level 2: Orange, Level 3: Red
+        colors = [(255,255,0), (255,140,0), (255,0,0)]
+        self.color = colors[min(self.upgrade_level, 2)]
 
     def update(self, enemies: list):
         # Remove dead or out-of-range targets
@@ -80,4 +86,13 @@ class TeslaTurret(Turret):
                 spark_offset_y = random.randint(-self.spark_spread, self.spark_spread)
                 spark_pos = (end_pos[0] + spark_offset_x, end_pos[1] + spark_offset_y)
                 pygame.draw.circle(screen, self.lightning_color, spark_pos, self.spark_size)
-                pygame.draw.circle(screen, WHITE, spark_pos, self.spark_size // 2) 
+                pygame.draw.circle(screen, WHITE, spark_pos, self.spark_size // 2)
+
+    def upgrade(self):
+        self.damage *= 2
+        if self.upgrade_level < 2:
+            self.upgrade_level += 1
+        self.set_color()
+
+    def get_upgrade_cost(self):
+        return 3 * self.cost * (self.upgrade_level + 1) 

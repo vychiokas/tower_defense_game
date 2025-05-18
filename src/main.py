@@ -365,6 +365,7 @@ sell_selected_tower = None
 # Add variables for sell menu
 sell_menu_tower = None
 sell_menu_rect = None
+sell_menu_rects = None
 while running:
     if game_state == 'menu':
         main_menu.draw(screen)
@@ -434,19 +435,42 @@ while running:
         # Draw sell menu if open
         if sell_menu_tower in turrets:
             # Draw a small transparent menu near the turret
-            menu_width, menu_height = 80, 40
+            menu_width, menu_height = 100, 80
             menu_x = sell_menu_tower.pos[0] + 30
             menu_y = sell_menu_tower.pos[1] - menu_height // 2
             sell_menu_rect = pygame.Rect(menu_x, menu_y, menu_width, menu_height)
             s = pygame.Surface((menu_width, menu_height), pygame.SRCALPHA)
             s.fill((255,255,255,200))
             screen.blit(s, (menu_x, menu_y))
+            font = pygame.font.Font(None, 28)
             # Draw 'Sell' in red
-            font = pygame.font.Font(None, 32)
             sell_text = font.render("Sell", True, (220,0,0))
-            screen.blit(sell_text, (menu_x + menu_width//2 - sell_text.get_width()//2, menu_y + menu_height//2 - sell_text.get_height()//2))
+            sell_rect = sell_text.get_rect(center=(menu_x + menu_width//2, menu_y + 20))
+            screen.blit(sell_text, sell_rect)
+            # Draw 'Upgrade' in blue, but gray out if at max level
+            upgrade_cost = sell_menu_tower.get_upgrade_cost()
+            if hasattr(sell_menu_tower, 'upgrade_level') and sell_menu_tower.upgrade_level >= 2:
+                upgrade_text = font.render("Upgrade (MAX)", True, (120,120,120))
+                upgrade_rect = upgrade_text.get_rect(center=(menu_x + menu_width//2, menu_y + 55))
+                screen.blit(upgrade_text, upgrade_rect)
+                cost_font = pygame.font.Font(None, 22)
+                cost_text = cost_font.render("Max Level", True, (120,120,120))
+                cost_rect = cost_text.get_rect(center=(menu_x + menu_width//2, menu_y + 72))
+                screen.blit(cost_text, cost_rect)
+            else:
+                upgrade_text = font.render("Upgrade", True, (0,80,220))
+                upgrade_rect = upgrade_text.get_rect(center=(menu_x + menu_width//2, menu_y + 55))
+                screen.blit(upgrade_text, upgrade_rect)
+                # Draw upgrade cost below upgrade
+                cost_font = pygame.font.Font(None, 22)
+                cost_text = cost_font.render(f"Cost: {upgrade_cost}", True, (0,0,0))
+                cost_rect = cost_text.get_rect(center=(menu_x + menu_width//2, menu_y + 72))
+                screen.blit(cost_text, cost_rect)
+            # Save rects for click detection
+            sell_menu_rects = {'sell': sell_rect, 'upgrade': upgrade_rect}
         else:
             sell_menu_rect = None
+            sell_menu_rects = None
         # Draw current wave
         current_wave.draw(screen)
         # Draw effects on top of everything
@@ -481,13 +505,30 @@ while running:
                     mx, my = event.pos
                     # If sell menu is open, check if click is inside menu
                     if sell_menu_tower and sell_menu_rect and sell_menu_rect.collidepoint(mx, my):
-                        # Sell turret
-                        refund = int(sell_menu_tower.cost * 0.75)
-                        stats.gold += refund
-                        game_map.free_cell(sell_menu_tower.pos[0], sell_menu_tower.pos[1])
-                        turrets.remove(sell_menu_tower)
-                        sell_menu_tower = None
-                        sell_menu_rect = None
+                        # Check if clicked on sell or upgrade
+                        rel_x, rel_y = mx - sell_menu_rect.x, my - sell_menu_rect.y
+                        if sell_menu_rects and sell_menu_rects['sell'].collidepoint(mx, my):
+                            # Sell turret
+                            refund = int(sell_menu_tower.cost * 0.75)
+                            stats.gold += refund
+                            game_map.free_cell(sell_menu_tower.pos[0], sell_menu_tower.pos[1])
+                            turrets.remove(sell_menu_tower)
+                            sell_menu_tower = None
+                            sell_menu_rect = None
+                        elif sell_menu_rects and sell_menu_rects['upgrade'].collidepoint(mx, my):
+                            # Upgrade turret if enough gold and not at max level
+                            if hasattr(sell_menu_tower, 'upgrade_level') and sell_menu_tower.upgrade_level >= 2:
+                                pass  # Do nothing if at max level
+                            else:
+                                upgrade_cost = sell_menu_tower.get_upgrade_cost()
+                                if stats.can_afford(upgrade_cost):
+                                    stats.spend_gold(upgrade_cost)
+                                    sell_menu_tower.upgrade()
+                            sell_menu_tower = None
+                            sell_menu_rect = None
+                        else:
+                            sell_menu_tower = None
+                            sell_menu_rect = None
                     else:
                         # Check if clicked on a turret
                         for turret in turrets:

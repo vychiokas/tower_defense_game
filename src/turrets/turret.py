@@ -49,6 +49,7 @@ class Turret(ABC):
         self.update_dimensions()
         self.color = BLACK
         self.cost = 50  # Base cost for turrets
+        self.upgrade_level = 0
 
     def update_dimensions(self):
         width, height = pygame.display.get_surface().get_size()
@@ -59,6 +60,13 @@ class Turret(ABC):
     def scale_position(self, width_ratio: float, height_ratio: float):
         self.pos[0] = int(self.pos[0] * width_ratio)
         self.pos[1] = int(self.pos[1] * height_ratio)
+
+    def get_upgrade_cost(self):
+        return int(self.cost * 3 * (self.upgrade_level + 1))
+
+    @abstractmethod
+    def upgrade(self):
+        pass
 
     @abstractmethod
     def update(self, enemies: list[Enemy]):

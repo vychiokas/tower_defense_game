@@ -16,10 +16,17 @@ class TowerMenu:
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.bg_color, self.rect)
+        mouse_pos = pygame.mouse.get_pos()
+        turret_costs = [50, 75, 100]  # Bullet, Tesla, Ice
+        turret_names = ["Bullet", "Tesla", "Ice"]
+        font = pygame.font.Font(None, 24)
         # Draw bullet turret button (circle)
         button = self.buildings[0]
         color = RED if self.selected_building == 0 else BLACK
         pygame.draw.circle(screen, color, button.center, button.width // 2)
+        if button.collidepoint(mouse_pos):
+            cost_text = font.render(f"{turret_names[0]}: {turret_costs[0]}G", True, (0,0,0))
+            screen.blit(cost_text, (button.centerx - cost_text.get_width()//2, button.top - 28))
         # Draw tesla turret button (triangle)
         button = self.buildings[1]
         color = YELLOW if self.selected_building == 1 else BLACK
@@ -29,6 +36,9 @@ class TowerMenu:
             (button.right, button.bottom),
         ]
         pygame.draw.polygon(screen, color, points)
+        if button.collidepoint(mouse_pos):
+            cost_text = font.render(f"{turret_names[1]}: {turret_costs[1]}G", True, (0,0,0))
+            screen.blit(cost_text, (button.centerx - cost_text.get_width()//2, button.top - 28))
         # Draw ice turret button (hexagon)
         button = self.buildings[2]
         color = BLUE if self.selected_building == 2 else BLACK
@@ -41,6 +51,9 @@ class TowerMenu:
                 button.centery + radius * math.sin(angle)
             ))
         pygame.draw.polygon(screen, color, points)
+        if button.collidepoint(mouse_pos):
+            cost_text = font.render(f"{turret_names[2]}: {turret_costs[2]}G", True, (0,0,0))
+            screen.blit(cost_text, (button.centerx - cost_text.get_width()//2, button.top - 28))
 
     def handle_click(self, pos):
         for i, button in enumerate(self.buildings):

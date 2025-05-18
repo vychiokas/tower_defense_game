@@ -10,11 +10,17 @@ class IceTurret(Turret):
         self.damage = 5  # Lower damage than Tesla
         self.range = 150  # Larger range than other turrets
         self.cost = 100  # Most expensive due to area effect
-        self.color = BLUE  # Changed from YELLOW to BLUE
         self.slow_factor = 0.5  # Slows enemies to 50% speed
         self.targets = []  # All enemies in range
         self.effect_color = (100, 200, 255)  # Changed to light blue for ice effect
         self.effect_width = 2  # Thinner lines than Tesla
+        self.upgrade_level = 0
+        self.set_color()
+
+    def set_color(self):
+        # Level 1: Blue, Level 2: Cyan, Level 3: White
+        colors = [(0,0,255), (0,255,255), (255,255,255)]
+        self.color = colors[min(self.upgrade_level, 2)]
 
     def update(self, enemies: list):
         # Find all enemies in range
@@ -67,4 +73,13 @@ class IceTurret(Turret):
                 ]
                 points.append(point)
             points.append(end_pos)
-            pygame.draw.lines(screen, self.effect_color, False, points, self.effect_width) 
+            pygame.draw.lines(screen, self.effect_color, False, points, self.effect_width)
+
+    def upgrade(self):
+        self.damage *= 2
+        if self.upgrade_level < 2:
+            self.upgrade_level += 1
+        self.set_color()
+
+    def get_upgrade_cost(self):
+        return 3 * self.cost * (self.upgrade_level + 1) 
