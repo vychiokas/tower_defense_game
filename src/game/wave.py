@@ -3,7 +3,7 @@ from typing import Type
 
 import pygame
 
-from enemy import Enemy
+from enemies.enemy import Enemy
 
 
 class Wave:

@@ -6,38 +6,36 @@ import sqlite3
 import random
 import threading
 
-from enemy import (
-    Boss,
-    LightFastEnemy,
-    LightSlowEnemy,
-    MediumFastEnemy,
-    MediumSlowEnemy,
-    HeavyFastEnemy,
-    HeavySlowEnemy,
-    DynamicEnemy,
-)
-from turret import BulletTurret, TeslaTurret, IceTurret
-from wave import Wave
+from enemies.enemy import Boss, LightFastEnemy, LightSlowEnemy, MediumFastEnemy, MediumSlowEnemy, HeavyFastEnemy, HeavySlowEnemy, DynamicEnemy
+from turrets import BulletTurret, TeslaTurret, IceTurret
+from game.wave import Wave
+from menus.main_menu import MainMenu
+from menus.tower_menu import TowerMenu
+from menus.high_scores_menu import HighScoresMenu
+from menus.difficulty_menu import DifficultyMenu
+from menus.seed_menu import SeedMenu
+from config import WIDTH, HEIGHT, MENU_HEIGHT, FPS, WHITE, GREEN, RED, BLUE, BROWN, GRAY, LIGHT_GRAY, BLACK, YELLOW, STARTING_GOLD
+from db_utils import get_top_scores, save_score_to_db, save_score_async
 
 pygame.init()
 
 # Constants
-WIDTH, HEIGHT = 800, 600
-MENU_HEIGHT = 80
-FPS = 60
+# WIDTH, HEIGHT = 800, 600
+# MENU_HEIGHT = 80
+# FPS = 60
 
 # Colors
-WHITE = (255, 255, 255)
-GREEN = (34, 177, 76)
-RED = (200, 0, 0)
-BLUE = (0, 0, 255)
-BROWN = (139, 69, 19)
-GRAY = (169, 169, 169)
-LIGHT_GRAY = (211, 211, 211)
-BLACK = (0, 0, 0)
-YELLOW = (255, 255, 0)
+# WHITE = (255, 255, 255)
+# GREEN = (34, 177, 76)
+# RED = (200, 0, 0)
+# BLUE = (0, 0, 255)
+# BROWN = (139, 69, 19)
+# GRAY = (169, 169, 169)
+# LIGHT_GRAY = (211, 211, 211)
+# BLACK = (0, 0, 0)
+# YELLOW = (255, 255, 0)
 
-STARTING_GOLD = 1000
+# STARTING_GOLD = 1000
 
 
 def save_score_to_db(score):
@@ -49,7 +47,7 @@ def save_score_to_db(score):
     conn.close()
 
 
-def save_score_async(score):
+def save_score_async(score, difficulty):
     threading.Thread(target=save_score_to_db, args=(score,), daemon=True).start()
 
 
@@ -115,6 +113,7 @@ class GameMap:
         self.bg_color = GREEN
         self.path_color = BLUE
         self.road_color = BROWN
+        self.reserved_rows = 2  # Top two rows reserved
         self.path = self.generate_random_path()
         self.grid = self.create_grid()
         self.grid_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)  # Surface for transparent grid
@@ -123,26 +122,26 @@ class GameMap:
         # Path starts at left edge, ends at right edge, only 90-degree turns
         cols = WIDTH // self.grid_size
         rows = (HEIGHT - MENU_HEIGHT) // self.grid_size
-        x, y = 1, random.randint(2, rows-3)  # Start near left edge, avoid top/bottom
+        # Start y is at least self.reserved_rows, avoid top two rows
+        x, y = 1, random.randint(self.reserved_rows + 1, rows-3)
         path = [(x * self.grid_size + self.grid_size // 2, y * self.grid_size + self.grid_size // 2)]
         direction = 'right'
         visited = set()
         visited.add((x, y))
-        must_continue = False  # After a turn, must go straight at least once
+        must_continue = False
         while x < cols - 2:
             moves = []
             if must_continue:
-                # Only allow to continue in the same direction
                 if direction == 'right' and x < cols - 2:
                     moves = ['right']
-                elif direction == 'up' and y > 1:
+                elif direction == 'up' and y > self.reserved_rows:
                     moves = ['up']
                 elif direction == 'down' and y < rows - 2:
                     moves = ['down']
             else:
                 if direction != 'left' and x < cols - 2:
                     moves.append('right')
-                if direction != 'down' and y > 1:
+                if direction != 'down' and y > self.reserved_rows:
                     moves.append('up')
                 if direction != 'up' and y < rows - 2:
                     moves.append('down')
@@ -156,11 +155,10 @@ class GameMap:
                     ny -= 1
                 elif move == 'down':
                     ny += 1
-                if (nx, ny) not in visited and 1 <= nx < cols-1 and 1 <= ny < rows-1:
+                if (nx, ny) not in visited and 1 <= nx < cols-1 and self.reserved_rows <= ny < rows-1:
                     x, y = nx, ny
                     path.append((x * self.grid_size + self.grid_size // 2, y * self.grid_size + self.grid_size // 2))
                     visited.add((x, y))
-                    # If direction changed, set must_continue for next step
                     if move != direction:
                         must_continue = True
                     else:
@@ -169,7 +167,6 @@ class GameMap:
                     moved = True
                     break
             if not moved:
-                # If stuck, just go right if possible
                 if x < cols - 2:
                     x += 1
                     path.append((x * self.grid_size + self.grid_size // 2, y * self.grid_size + self.grid_size // 2))
@@ -183,17 +180,18 @@ class GameMap:
         return path
 
     def create_grid(self):
-        # Create a 2D grid covering the map (excluding menu area)
         rows = (HEIGHT - MENU_HEIGHT) // self.grid_size
         cols = WIDTH // self.grid_size
         grid = [[True for _ in range(cols)] for _ in range(rows)]
-        
+        # Mark reserved rows as unavailable
+        for y in range(self.reserved_rows):
+            for x in range(cols):
+                grid[y][x] = False
         # Mark cells containing the road as unavailable
         for i in range(len(self.path) - 1):
             start = self.path[i]
             end = self.path[i + 1]
             self.mark_path_cells(grid, start, end)
-            
         return grid
     
     def mark_path_cells(self, grid, start, end):
@@ -212,15 +210,12 @@ class GameMap:
                     grid[start_y][x] = False
 
     def is_valid_placement(self, x: int, y: int) -> bool:
-        # Convert pixel coordinates to grid coordinates
         grid_x = x // self.grid_size
         grid_y = y // self.grid_size
-        
-        # Check if within grid bounds
+        # Check if within grid bounds and not in reserved rows
         if (grid_y >= len(self.grid) or grid_x >= len(self.grid[0]) or 
-            grid_y < 0 or grid_x < 0):
+            grid_y < self.reserved_rows or grid_x < 0):
             return False
-            
         return self.grid[grid_y][grid_x]
 
     def occupy_cell(self, x: int, y: int):
@@ -229,9 +224,18 @@ class GameMap:
         if grid_y < len(self.grid) and grid_x < len(self.grid[0]):
             self.grid[grid_y][grid_x] = False
 
+    def free_cell(self, x: int, y: int):
+        grid_x = x // self.grid_size
+        grid_y = y // self.grid_size
+        if grid_y < len(self.grid) and grid_x < len(self.grid[0]):
+            self.grid[grid_y][grid_x] = True
+
     def draw(self, screen: pygame.Surface):
         screen.fill(self.bg_color)
-        
+        # Draw reserved top rows as gray
+        for y in range(self.reserved_rows):
+            rect = pygame.Rect(0, y * self.grid_size, WIDTH, self.grid_size)
+            pygame.draw.rect(screen, GRAY, rect)
         # Draw the path
         for i in range(len(self.path) - 1):
             pygame.draw.line(
@@ -239,15 +243,10 @@ class GameMap:
             )
         for point in self.path:
             pygame.draw.circle(screen, self.path_color, point, 5)
-
-        # Clear the grid surface
-        self.grid_surface.fill((0, 0, 0, 0))  # Transparent fill
-        
-        # Draw the semi-transparent grid only for valid placement cells
-        for y in range(len(self.grid)):
+        self.grid_surface.fill((0, 0, 0, 0))
+        for y in range(self.reserved_rows, len(self.grid)):
             for x in range(len(self.grid[0])):
-                # Only draw grid for valid placement cells
-                if self.grid[y][x]:  # If cell is available for placement
+                if self.grid[y][x]:
                     rect = pygame.Rect(
                         x * self.grid_size, 
                         y * self.grid_size, 
@@ -255,70 +254,7 @@ class GameMap:
                         self.grid_size
                     )
                     pygame.draw.rect(self.grid_surface, (*LIGHT_GRAY, 128), rect, 1)
-        
-        # Blit the grid surface onto the main screen
         screen.blit(self.grid_surface, (0, 0))
-
-class Menu:
-    def __init__(self):
-        self.bg_color = GRAY
-        self.selected_building = None
-        self.rect = pygame.Rect(0, HEIGHT - MENU_HEIGHT, WIDTH, MENU_HEIGHT)
-        button_size = 40
-        self.buildings = [
-            pygame.Rect(50, HEIGHT - MENU_HEIGHT + 20, button_size, button_size),
-            pygame.Rect(120, HEIGHT - MENU_HEIGHT + 20, button_size, button_size),
-            pygame.Rect(190, HEIGHT - MENU_HEIGHT + 20, button_size, button_size),
-        ]
-
-    def draw(self, screen: pygame.Surface):
-        # Draw menu background
-        pygame.draw.rect(screen, self.bg_color, self.rect)
-        
-        # Draw bullet turret button (circle)
-        button = self.buildings[0]
-        color = RED if self.selected_building == 0 else BLACK
-        pygame.draw.circle(screen, color, button.center, button.width // 2)
-
-        # Draw tesla turret button (triangle)
-        button = self.buildings[1]
-        color = YELLOW if self.selected_building == 1 else BLACK
-        points = [
-            (button.centerx, button.top),
-            (button.left, button.bottom),
-            (button.right, button.bottom),
-        ]
-        pygame.draw.polygon(screen, color, points)
-
-        # Draw ice turret button (hexagon)
-        button = self.buildings[2]
-        color = BLUE if self.selected_building == 2 else BLACK
-        points = []
-        for i in range(6):
-            angle = math.pi / 3 * i
-            radius = button.width // 2
-            points.append((
-                button.centerx + radius * math.cos(angle),
-                button.centery + radius * math.sin(angle)
-            ))
-        pygame.draw.polygon(screen, color, points)
-
-    def handle_click(self, pos):
-        # Check if turret button was clicked
-        for i, button in enumerate(self.buildings):
-            if button.collidepoint(pos):
-                self.selected_building = i
-                return
-
-def get_top_scores(limit=10):
-    conn = sqlite3.connect('scores.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS scores (id INTEGER PRIMARY KEY AUTOINCREMENT, score INTEGER, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
-    c.execute('SELECT score, timestamp FROM scores ORDER BY score DESC, timestamp ASC LIMIT ?;', (limit,))
-    scores = c.fetchall()
-    conn.close()
-    return scores
-
 
 def draw_main_menu(screen, selected_option):
     screen.fill(GRAY)
@@ -358,35 +294,51 @@ def draw_high_scores(screen):
     pygame.display.flip()
 
 
-def generate_wave(wave_number, game_map, stats):
-    path = game_map.path
-    if wave_number % 5 == 4:  # Every 5th wave (0-based)
-        # Boss wave
-        num_enemies = 1
-        health = 3000 + wave_number * 500
-        speed = 0.7 + wave_number * 0.03
-        size = 28
-        color = (160, 32, 240)  # Purple
-        gold = 100 + wave_number * 10
-        return Wave(path, num_enemies, 0.8, lambda p: DynamicEnemy(p, speed, health, size, color, gold, gold), stats)
-    else:
-        num_enemies = 10 + wave_number * 4
-        health = 50 + wave_number * 15
-        speed = 1.0 + wave_number * 0.07
-        size = 14 + min(wave_number, 10)  # Slightly bigger over time
-        color = (0, 0, 255) if wave_number < 7 else (255, 165, 0) if wave_number < 14 else (255, 0, 0)
-        gold = 10 + wave_number * 2
-        return Wave(path, num_enemies, max(0.5 - wave_number * 0.02, 0.08), lambda p: DynamicEnemy(p, speed, health, size, color, gold, gold), stats)
-
+# Add global variable for difficulty
+selected_difficulty = 'Medium'
+selected_seed = None
 
 def reset_game():
-    global game_map, menu, stats, turrets, wave_index, current_wave
+    global game_map, main_menu, stats, turrets, wave_index, current_wave
+    random.seed(selected_seed)
     game_map = GameMap()
-    menu = Menu()
+    main_menu = MainMenu()
     stats = GameStats()
     turrets = []
     wave_index = 0
-    current_wave = generate_wave(wave_index, game_map, stats)
+    current_wave = generate_wave(wave_index, game_map, stats, selected_difficulty)
+
+def generate_wave(wave_number, game_map, stats, difficulty):
+    path = game_map.path
+    # Difficulty multipliers
+    if difficulty == 'Easy':
+        health_mult = 1.0
+        speed_mult = 1.0
+        count_mult = 1.0
+    elif difficulty == 'Nightmare':
+        health_mult = 4.0
+        speed_mult = 2.0
+        count_mult = 4.0
+    else:  # Medium
+        health_mult = 1.5
+        speed_mult = 1.2
+        count_mult = 1.5
+    if wave_number % 5 == 4:
+        num_enemies = int(1 * count_mult)
+        health = int((3000 + wave_number * 500) * health_mult)
+        speed = (0.7 + wave_number * 0.03) * speed_mult
+        size = 28
+        color = (160, 32, 240)
+        gold = 100 + wave_number * 10
+        return Wave(path, num_enemies, 0.8, lambda p: DynamicEnemy(p, speed, health, size, color, gold, gold), stats)
+    else:
+        num_enemies = int((10 + wave_number * 4) * count_mult)
+        health = int((50 + wave_number * 15) * health_mult)
+        speed = (1.0 + wave_number * 0.07) * speed_mult
+        size = 14 + min(wave_number, 10)
+        color = (0, 0, 255) if wave_number < 7 else (255, 165, 0) if wave_number < 14 else (255, 0, 0)
+        gold = 10 + wave_number * 2
+        return Wave(path, num_enemies, max(0.5 - wave_number * 0.02, 0.08), lambda p: DynamicEnemy(p, speed, health, size, color, gold, gold), stats)
 
 # Setup
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -399,43 +351,75 @@ menu_selected = 0  # 0: New Game, 1: High Scores, 2: Exit
 
 # Init the game objects
 game_map = GameMap()
-menu = Menu()
+main_menu = MainMenu()
+tower_menu = TowerMenu()
+high_scores_menu = HighScoresMenu()
 stats = GameStats()
 turrets: list[BulletTurret] = []
 wave_index = 0
-current_wave = generate_wave(wave_index, game_map, stats)
+current_wave = generate_wave(wave_index, game_map, stats, selected_difficulty)
 running = True
+difficulty_menu = DifficultyMenu()
+seed_menu = SeedMenu()
+sell_selected_tower = None
+# Add variables for sell menu
+sell_menu_tower = None
+sell_menu_rect = None
 while running:
     if game_state == 'menu':
-        draw_main_menu(screen, menu_selected)
+        main_menu.draw(screen)
+        if selected_seed is not None:
+            font = pygame.font.Font(None, 32)
+            seed_text = font.render(f"Seed: {selected_seed}", True, BLACK)
+            screen.blit(seed_text, (WIDTH // 2 - seed_text.get_width() // 2, 30))
+            pygame.display.flip()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    menu_selected = (menu_selected - 1) % 3
-                elif event.key == pygame.K_DOWN:
-                    menu_selected = (menu_selected + 1) % 3
-                elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                    if menu_selected == 0:  # New Game
-                        reset_game()
-                        game_state = 'game'
-                    elif menu_selected == 1:  # High Scores
-                        game_state = 'high_scores'
-                    elif menu_selected == 2:  # Exit
-                        running = False
-    elif game_state == 'high_scores':
-        draw_high_scores(screen)
+            else:
+                result = main_menu.handle_event(event)
+                if result == "New Game":
+                    game_state = 'difficulty_select'
+                elif result == "High Scores":
+                    game_state = 'high_scores'
+                elif result == "Exit":
+                    running = False
+    elif game_state == 'difficulty_select':
+        difficulty_menu.draw(screen)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+            else:
+                result = difficulty_menu.handle_event(event)
+                if result in ("Easy", "Medium", "Nightmare"):
+                    selected_difficulty = result
+                    game_state = 'seed_select'
+                elif result == "BACK":
                     game_state = 'menu'
+    elif game_state == 'seed_select':
+        seed_menu.draw(screen)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            else:
+                result = seed_menu.handle_event(event)
+                if isinstance(result, int):
+                    selected_seed = result
+                    reset_game()
+                    game_state = 'game'
+                elif result == "BACK":
+                    game_state = 'difficulty_select'
+    elif game_state == 'high_scores':
+        high_scores_menu.draw(screen)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif high_scores_menu.handle_event(event):
+                game_state = 'menu'
     elif game_state == 'game':
         # Draw all game elements
         game_map.draw(screen)
-        menu.draw(screen)
+        tower_menu.draw(screen)
         stats.draw(screen)
         
         # Draw current wave number at the top center
@@ -443,28 +427,44 @@ while running:
         wave_text = wave_font.render(f"Wave: {wave_index+1}", True, BLACK)
         screen.blit(wave_text, (WIDTH // 2 - wave_text.get_width() // 2, 10))
         
-        # Update/draw turrets
+        # Draw turrets
         for turret in turrets:
             turret.update(current_wave.enemies)
             turret.draw(screen)
+        # Draw sell menu if open
+        if sell_menu_tower in turrets:
+            # Draw a small transparent menu near the turret
+            menu_width, menu_height = 80, 40
+            menu_x = sell_menu_tower.pos[0] + 30
+            menu_y = sell_menu_tower.pos[1] - menu_height // 2
+            sell_menu_rect = pygame.Rect(menu_x, menu_y, menu_width, menu_height)
+            s = pygame.Surface((menu_width, menu_height), pygame.SRCALPHA)
+            s.fill((255,255,255,200))
+            screen.blit(s, (menu_x, menu_y))
+            # Draw 'Sell' in red
+            font = pygame.font.Font(None, 32)
+            sell_text = font.render("Sell", True, (220,0,0))
+            screen.blit(sell_text, (menu_x + menu_width//2 - sell_text.get_width()//2, menu_y + menu_height//2 - sell_text.get_height()//2))
+        else:
+            sell_menu_rect = None
         # Draw current wave
         current_wave.draw(screen)
         # Draw effects on top of everything
         for turret in turrets:
-            if isinstance(turret, TeslaTurret):
+            if hasattr(turret, 'draw_effects'):
                 turret.draw_effects(screen)
         # Update/draw current wave
         current_wave.update()
         current_wave.draw(screen)
         if current_wave.is_finished():
             wave_index += 1
-            current_wave = generate_wave(wave_index, game_map, stats)
+            current_wave = generate_wave(wave_index, game_map, stats, selected_difficulty)
         # Check for game over
         if stats.is_game_over():
             # Return to menu after short pause
             pygame.display.flip()
             game_state = 'menu'
-            save_score_async(stats.score)
+            save_score_async(stats.score, selected_difficulty)
             continue
 
         for event in pygame.event.get():
@@ -472,34 +472,53 @@ while running:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_t:
-                    menu.selected_building = 0
+                    tower_menu.selected_building = 0
                 elif event.key == pygame.K_ESCAPE:
                     game_state = 'menu'
+                    sell_menu_tower = None
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                # If clicked inside menu bar
-                if event.pos[1] >= HEIGHT - MENU_HEIGHT:
-                    menu.handle_click(event.pos)
-                else:
-                    # If a building/turret is selected, try to place it
-                    if menu.selected_building is not None:
-                        x, y = event.pos
-                        if game_map.is_valid_placement(x, y):
-                            # Calculate grid position first
-                            grid_x = (x // game_map.grid_size) * game_map.grid_size + game_map.grid_size // 2
-                            grid_y = (y // game_map.grid_size) * game_map.grid_size + game_map.grid_size // 2
-                            # Create appropriate turret type
-                            if menu.selected_building == 0:
-                                new_turret = BulletTurret(grid_x, grid_y)
-                            elif menu.selected_building == 1:
-                                new_turret = TeslaTurret(grid_x, grid_y)
+                if event.button == 1:  # Left click
+                    mx, my = event.pos
+                    # If sell menu is open, check if click is inside menu
+                    if sell_menu_tower and sell_menu_rect and sell_menu_rect.collidepoint(mx, my):
+                        # Sell turret
+                        refund = int(sell_menu_tower.cost * 0.75)
+                        stats.gold += refund
+                        game_map.free_cell(sell_menu_tower.pos[0], sell_menu_tower.pos[1])
+                        turrets.remove(sell_menu_tower)
+                        sell_menu_tower = None
+                        sell_menu_rect = None
+                    else:
+                        # Check if clicked on a turret
+                        for turret in turrets:
+                            if (mx - turret.pos[0]) ** 2 + (my - turret.pos[1]) ** 2 <= turret.radius ** 2:
+                                sell_menu_tower = turret
+                                break
+                        else:
+                            # If clicked elsewhere, close menu and handle build
+                            sell_menu_tower = None
+                            sell_menu_rect = None
+                            # If clicked inside menu bar
+                            if my >= HEIGHT - MENU_HEIGHT:
+                                tower_menu.handle_click(event.pos)
                             else:
-                                new_turret = IceTurret(grid_x, grid_y)
-                            # Check if player can afford the turret
-                            if stats.can_afford(new_turret.cost):
-                                turrets.append(new_turret)
-                                game_map.occupy_cell(x, y)
-                                stats.spend_gold(new_turret.cost)
-                                menu.selected_building = None
+                                # If a building/turret is selected, try to place it
+                                if tower_menu.selected_building is not None:
+                                    x, y = event.pos
+                                    if game_map.is_valid_placement(x, y):
+                                        grid_x = (x // game_map.grid_size) * game_map.grid_size + game_map.grid_size // 2
+                                        grid_y = (y // game_map.grid_size) * game_map.grid_size + game_map.grid_size // 2
+                                        if tower_menu.selected_building == 0:
+                                            new_turret = BulletTurret(grid_x, grid_y)
+                                        elif tower_menu.selected_building == 1:
+                                            new_turret = TeslaTurret(grid_x, grid_y)
+                                        else:
+                                            new_turret = IceTurret(grid_x, grid_y)
+                                        if stats.can_afford(new_turret.cost):
+                                            turrets.append(new_turret)
+                                            game_map.occupy_cell(x, y)
+                                            stats.spend_gold(new_turret.cost)
+                                            tower_menu.selected_building = None
 
         pygame.display.flip()
         clock.tick(FPS)
